@@ -2,3 +2,15 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Generated model weights — too large and binary for git (regenerate via train_sac.py)
+models/
+
+# TensorBoard training logs
+logs/
+
+# Generated plots — regenerate via analysis/backtest.py and analysis/tearsheet.py
+plots/
+
+# OS
+.DS_Store
