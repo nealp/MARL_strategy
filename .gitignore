@@ -1,16 +1,57 @@
+# ── Virtual environments ─────────────────────────────────────────────────────
 venv/
-__pycache__/
-*.pyc
+.venv/
+env/
+.env/
+
+# ── Secrets ─────────────────────────────────────────────────────────────────
 .env
 
-# Generated model weights — too large and binary for git (regenerate via train_sac.py)
-models/
+# ── Python bytecode & runtime ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
 
+# ── Packaging / installs ────────────────────────────────────────────────────
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
+share/python-wheels/
+var/
+
+# ── Test / coverage / static analysis ───────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ── Jupyter ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── ML experiment tracking (optional) ───────────────────────────────────────
+wandb/
+mlruns/
+
+# ── IDE ─────────────────────────────────────────────────────────────────────
+.idea/
+
+# ── Project outputs (regenerate via training / analysis scripts) ────────────
+# Model weights — too large and binary for git (regenerate via train_sac.py)
+models/
 # TensorBoard training logs
 logs/
-
-# Generated plots — regenerate via analysis/backtest.py and analysis/tearsheet.py
+# Plots — regenerate via analysis/backtest.py and analysis/tearsheet.py
 plots/
 
-# OS
+# ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+ehthumbs.db
