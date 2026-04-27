@@ -255,7 +255,7 @@ def main() -> None:
     # ── Train ─────────────────────────────────────────────────────────────────
     print(f"Training for {args.timesteps:,} steps (seed={args.seed}) …")
     t0 = time.time()
-    model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+    model.learn(total_timesteps=args.timesteps, callback=eval_cb, progress_bar=True)
     elapsed = time.time() - t0
 
     # ── Save final checkpoint ─────────────────────────────────────────────────

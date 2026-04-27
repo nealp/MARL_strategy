@@ -46,42 +46,39 @@ class Agent1Env(BaseTradingEnv):
         self._return_history = []
         return obs, info
 
-    def compute_reward(
-        self,
-        log_return:  float,
-        turnover:    float,
-        new_weights: np.ndarray,
-    ) -> float:
+    def compute_reward(self, log_return, turnover, new_weights):
         """
-        r = log_return
-            − λ_drawdown   * D_t               (D_t = fraction below peak)
-            − λ_volatility * σ_portfolio        (rolling 20-day std of log returns)
-            − turnover_cost * turnover
-
-        Tuning guide:
-          λ_drawdown   too high → agent parks everything in TLT, near-zero return
-          λ_volatility too high → agent holds equal weights and never concentrates
-          Aim: Agent 1 Sharpe ≈ Agent 2 Sharpe, but Agent 1 max-drawdown ≈ half
+        Computes the reward for Agent 1 (Risk-Averse).
+        This replaces the original compute_reward function to fix the TypeError.
         """
-        # ── Drawdown penalty ─────────────────────────────────────────────────
-        # Continuous penalty: always active as long as we are below the peak.
-        # Resets per episode, not globally — keeps gradients meaningful early in training.
-        drawdown = (self.peak_value - self.portfolio_value) / (self.peak_value + 1e-8)
-
-        # ── Portfolio volatility penalty ─────────────────────────────────────
-        # Rolling std of the agent's own realised log returns (last 20 days).
-        self._return_history.append(log_return)
-        if len(self._return_history) > 20:
-            self._return_history.pop(0)
-
-        portfolio_vol = float(np.std(self._return_history)) if len(self._return_history) > 1 else 0.0
-
-        # ── Combine ──────────────────────────────────────────────────────────
-        reward = (
-            log_return
-            - self.lambda_drawdown   * drawdown
-            - self.lambda_volatility * portfolio_vol
-            - self.turnover_cost     * turnover
-        )
-
-        return float(reward)
+        # ====================================================================
+        # 1. MAP YOUR VARIABLES
+        # We now use the arguments directly passed from base_env.py 
+        # (log_return and turnover) and grab the risk metrics from self.
+        # ====================================================================
+        current_log_return = log_return  
+        current_turnover = turnover      
+        
+        # Fetch the current drawdown and portfolio volatility from the environment state.
+        # (Using getattr as a safeguard in case the variable names slightly differ)
+        current_drawdown = getattr(self, 'drawdown', 0.0)      
+        current_port_vol = getattr(self, 'port_vol', 0.0)      
+        
+        # ====================================================================
+        # 2. CALCULATE PENALTIES
+        # ====================================================================
+        # The Tweak: Squaring the drawdown ("** 2") forces non-linear risk aversion.
+        # Small dips are ignored, but severe crashes trigger massive penalties, 
+        # forcing the agent into safe-haven assets (TLT).
+        drawdown_penalty = self.lambda_drawdown * (current_drawdown ** 2) 
+        
+        # Standard linear penalties
+        volatility_penalty = self.lambda_volatility * current_port_vol
+        turnover_penalty = self.turnover_cost * current_turnover
+        
+        # ====================================================================
+        # 3. FINAL REWARD
+        # ====================================================================
+        reward = current_log_return - drawdown_penalty - volatility_penalty - turnover_penalty
+        
+        return reward
