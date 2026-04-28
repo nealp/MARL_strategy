@@ -166,8 +166,8 @@ def main() -> None:
         help="Which agent to train (1 = risk-averse, 2 = return-maximising)",
     )
     parser.add_argument(
-        "--timesteps", type=int, default=200_000,
-        help="Total training steps (default: 200000)",
+        "--timesteps", type=int, default=500_000,
+        help="Total training steps (default: 500000)",
     )
     parser.add_argument(
         "--seed", type=int, default=42,
