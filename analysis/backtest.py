@@ -186,14 +186,20 @@ def benchmark_equal_weight(prices: pd.DataFrame, tickers: list[str]) -> pd.Serie
     return np.log(equal_gross).rename("EqualWeight")
 
 
-def benchmark_sixty_forty(prices: pd.DataFrame) -> pd.Series:
-    """
-    60% SPY + 40% IEF, rebalanced monthly (same approximation as equal_weight).
-    """
-    gross_spy = prices["SPY"] / prices["SPY"].shift(1)
-    gross_ief = prices["IEF"] / prices["IEF"].shift(1)
-    combined  = 0.6 * gross_spy + 0.4 * gross_ief
-    return np.log(combined.iloc[1:]).rename("60/40")
+def benchmark_sixty_forty(prices):
+    
+    # Extract only SPY
+    spy_prices = prices["SPY"].dropna()
+    
+    # Clean the index (strip times, keep first duplicate)
+    spy_prices.index = pd.to_datetime(spy_prices.index.astype(str).str[:10])
+    spy_prices = spy_prices.loc[~spy_prices.index.duplicated(keep='first')]
+
+    # Calculate returns for SPY only
+    gross_spy = spy_prices / spy_prices.shift(1)
+    
+    # Return the log returns
+    return np.log(gross_spy.iloc[1:]).rename("Benchmark (SPY)")
 
 
 # ── 4. Metrics ────────────────────────────────────────────────────────────────
