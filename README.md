@@ -223,3 +223,44 @@ All stages passed.
 | quantstats | ≥ 0.0.62 | Portfolio performance metrics |
 | matplotlib | ≥ 3.8.0 | Plotting |
 | seaborn | ≥ 0.13.0 | Statistical visualization |
+
+---
+
+## Architecture Notes & Changes
+
+### 26-Asset Universe Expansion (April 2026)
+
+Both agents were updated to trade the same expanded 26-asset universe:
+- 24 equities across 8 sectors (3 per sector): Info Tech, Financials, Health Care, Consumer Discretionary, Communication Services, Industrials, Consumer Staples, Energy
+- 2 bond ETFs: IEF (7–10 year Treasuries), SHY (1–3 year Treasuries)
+
+**Why both agents now trade the same universe:** Specialization between agents comes entirely from reward shaping (Agent 1 penalizes drawdown + vol; Agent 2 does not), not from different asset sets. The meta-agent then dynamically rebalances capital between their strategies.
+
+**Note on capital allocation — training vs. backtesting discrepancy:**
+
+During **training**, the two agents are completely isolated. Each manages its own independent portfolio (starting value = 1.0 per episode) and has no knowledge the other agent exists. There is no shared capital, no interaction, and no competition between them.
+
+During **backtesting**, the meta-agent in `analysis/backtest.py` runs both trained policies simultaneously and combines their outputs. It computes a daily blended return as `log(w1 × exp(r1) + w2 × exp(r2))`, where `w1 + w2 = 1.0`. Every 20 trading days it rebalances the split based on each agent's rolling Sharpe + momentum signal, clipped to [0.10, 0.90] to prevent going all-in on either agent.
+
+From a practical standpoint, this means the meta-agent acts like a fund-of-funds: an investor allocates `w1 %` of capital to Agent 1's strategy and `w2 %` to Agent 2's, with that split adjusting dynamically. The agents themselves cannot react to each other — they are fixed, pre-trained policies. This design is sometimes called "ensemble RL" rather than true competitive MARL.
+
+### Hyperparameter Updates (April 2026)
+
+The following changes were made to address performance regression after the asset universe expansion:
+
+| Parameter | Old Value | New Value | Reason |
+|---|---|---|---|
+| `LAMBDA_DRAWDOWN` | 1.0 | **0.6** | 26 diversified assets produce naturally smoother portfolios; the squared penalty was over-firing and forcing Agent 1 into near-cash |
+| `LAMBDA_VOLATILITY` | 0.5 | **0.35** | Same reason — reduced penalty scale for the wider, more diversified universe |
+| `net_arch` | [64, 64] | **[256, 256]** | Default network was a bottleneck for 130-dim input → 26-dim output |
+| `buffer_size` | 100,000 | **300,000** | Larger buffer for more diverse replay experience across the wider state space |
+
+### Results (post-retraining at 400k timesteps)
+
+*To be filled in after retraining.*
+
+| Metric | Agent 1 | Agent 2 | Meta-Agent |
+|---|---|---|---|
+| Total Return | — | — | — |
+| Annualized Sharpe | — | — | — |
+| Max Drawdown | — | — | — |

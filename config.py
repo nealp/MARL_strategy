@@ -72,8 +72,8 @@ EPISODE_LENGTH = 252    # trading days per training episode (~1 year)
 # ── Reward shaping ───────────────────────────
 # Only Agent 1 uses drawdown and volatility penalties
 # Tune these if Agent 1 is too passive (raise) or indistinguishable from Agent 2 (lower)
-LAMBDA_DRAWDOWN   = 1.0    # weight on drawdown penalty
-LAMBDA_VOLATILITY = 0.5    # weight on rolling portfolio-volatility penalty
+LAMBDA_DRAWDOWN   = 0.6    # weight on drawdown penalty (reduced from 1.0 for 26-asset universe)
+LAMBDA_VOLATILITY = 0.35   # weight on rolling portfolio-volatility penalty (reduced from 0.5)
 
 # Both agents pay this friction cost to prevent unrealistic high-turnover strategies
 TURNOVER_COST = 0.001      # ~10 bps per unit of turnover

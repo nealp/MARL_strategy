@@ -190,6 +190,7 @@ def benchmark_sixty_forty(prices: pd.DataFrame) -> pd.Series:
     """
     60% SPY + 40% IEF, rebalanced monthly (same approximation as equal_weight).
     """
+    prices = prices.loc[~prices.index.duplicated(keep="first")]
     gross_spy = prices["SPY"] / prices["SPY"].shift(1)
     gross_ief = prices["IEF"] / prices["IEF"].shift(1)
     combined  = 0.6 * gross_spy + 0.4 * gross_ief
