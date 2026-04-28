@@ -4,23 +4,47 @@
 # ─────────────────────────────────────────────
 
 # ── Asset universes ──────────────────────────
-# Agent 1 includes TLT so the risk-averse agent has a safe-haven instrument
+# Both agents use the expanded 26-asset universe (24 equities + 2 bond ETFs).
 AGENT1_TICKERS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL",   # Tech
-    "JPM",  "BAC",                       # Financials
-    "UNH",  "JNJ",                       # Healthcare
-    "AMZN", "WMT",                       # Consumer
-    "XOM",  "CVX",                       # Energy
-    "TLT",                               # Long-duration treasuries (safe haven)
+    # Information Technology
+    "AAPL", "MSFT", "NVDA",
+    # Financials
+    "GS", "JPM", "V",
+    # Health Care
+    "AMGN", "JNJ", "UNH",
+    # Consumer Discretionary
+    "AMZN", "HD", "MCD",
+    # Communication Services
+    "GOOG", "META", "NFLX",
+    # Industrials
+    "CAT", "HON", "WM",
+    # Consumer Staples
+    "KO", "COST", "PG",
+    # Energy
+    "COP", "XOM", "SLB",
+    # Bonds
+    "IEF", "SHY",
 ]
 
-# Agent 2 has no TLT — purely equity, return-maximizing
 AGENT2_TICKERS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL",
-    "JPM",  "BAC",
-    "UNH",  "JNJ",
-    "AMZN", "WMT",
-    "XOM",  "CVX",
+    # Information Technology
+    "AAPL", "MSFT", "NVDA",
+    # Financials
+    "GS", "JPM", "V",
+    # Health Care
+    "AMGN", "JNJ", "UNH",
+    # Consumer Discretionary
+    "AMZN", "HD", "MCD",
+    # Communication Services
+    "GOOG", "META", "NFLX",
+    # Industrials
+    "CAT", "HON", "WM",
+    # Consumer Staples
+    "KO", "COST", "PG",
+    # Energy
+    "COP", "XOM", "SLB",
+    # Bonds
+    "IEF", "SHY",
 ]
 
 # ── Date ranges ──────────────────────────────
