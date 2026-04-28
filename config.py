@@ -6,22 +6,18 @@
 # ── Asset universes ──────────────────────────
 # Agent 1: sector-balanced equities + IEF (7–10y Treasuries) + SHY (1–3y, cash-like)
 AGENT1_TICKERS = [
-    # Information Technology
-      "AAPL", "MSFT", "NVDA", "GOOGL",   # Tech
-    "JPM",  "BAC",                       # Financials
-    "UNH",  "JNJ",                       # Healthcare
-    "AMZN", "WMT",                       # Consumer
-    "XOM",  "CVX",                       # Energy
-    "TLT",                               # Long-duration treasuries (safe haven)
+    "AAPL", "MSFT", "NVDA", "GS", "JPM", "V", 
+    "AMGN", "JNJ", "UNH", "AMZN", "HD", "MCD", 
+    "GOOG", "DIS", "NFLX", "CAT", "HON", "WM", 
+    "KO", "COST", "PG", "COP", "XOM", "SLB",
+    "IEF", "SHY"
 ]
 
-# Agent 2: proposal equities only (no IEF/SHY); return-maximizing SAC + turnover penalty
 AGENT2_TICKERS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL",
-    "JPM",  "BAC",
-    "UNH",  "JNJ",
-    "AMZN", "WMT",
-    "XOM",  "CVX",
+    "AAPL", "MSFT", "NVDA", "GS", "JPM", "V", 
+    "AMGN", "JNJ", "UNH", "AMZN", "HD", "MCD", 
+    "GOOG", "DIS", "NFLX", "CAT", "HON", "WM", 
+    "KO", "COST", "PG", "COP", "XOM", "SLB"
 ]
 
 # ── Date ranges ──────────────────────────────
