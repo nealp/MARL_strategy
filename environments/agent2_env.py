@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # environments/agent2_env.py  —  Stage 5 (Agent 2)
 #
-# Return-maximizing agent.  Assets: 12 equities (no TLT).
+# Return-maximizing agent.  Equities from config.AGENT2_TICKERS (no bond ETFs); no drawdown/vol penalties.
 #
 # Reward = log_return − turnover_cost * turnover
 #

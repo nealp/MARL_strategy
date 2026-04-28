@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # environments/agent1_env.py  —  Stage 5 (Agent 1)
 #
-# Risk-averse agent.  Assets: 12 equities + TLT.
+# Risk-averse agent.  Assets: equities + IEF/SHY (see config.AGENT1_TICKERS).
 #
 # Reward = log_return
 #          − λ_drawdown   * drawdown_from_peak
@@ -9,7 +9,7 @@
 #          − turnover_cost * turnover
 #
 # The drawdown and volatility penalties push the agent toward:
-#   • holding TLT during equity drawdowns (safe haven rotation)
+#   • holding IEF/SHY during equity drawdowns (defensive / cash-like rotation)
 #   • maintaining diversified weights (vol penalty punishes concentration)
 #   • cutting losing positions quickly (drawdown penalty makes holding them costly)
 # ─────────────────────────────────────────────
@@ -69,7 +69,7 @@ class Agent1Env(BaseTradingEnv):
         # ====================================================================
         # The Tweak: Squaring the drawdown ("** 2") forces non-linear risk aversion.
         # Small dips are ignored, but severe crashes trigger massive penalties, 
-        # forcing the agent into safe-haven assets (TLT).
+        # forcing the agent into safe-haven assets (e.g. IEF/SHY).
         drawdown_penalty = self.lambda_drawdown * (current_drawdown ** 2) 
         
         # Standard linear penalties

@@ -280,7 +280,7 @@ For your slide deck, the most impactful visuals are:
   3. plots/yearly_returns.png        — year-by-year bar chart (easy to explain)
   4. plots/meta_allocation.png       — shows the meta-agent switching between agents
   5. plots/tearsheet_meta.html       — open in browser for the full professional report
-  6. plots/weights_agent1.png        — shows agent 1 rotating toward TLT during stress
+  6. plots/weights_agent1.png        — shows agent 1 rotating toward bonds (e.g. IEF/SHY) during stress
 """)
 
 

@@ -48,9 +48,6 @@ mlruns/
 models/
 # TensorBoard training logs
 logs/
-# Plots — regenerate via analysis/backtest.py and analysis/tearsheet.py
-plots/
-
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

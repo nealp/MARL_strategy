@@ -4,9 +4,10 @@
 # ─────────────────────────────────────────────
 
 # ── Asset universes ──────────────────────────
-# Agent 1 includes TLT so the risk-averse agent has a safe-haven instrument
+# Agent 1: sector-balanced equities + IEF (7–10y Treasuries) + SHY (1–3y, cash-like)
 AGENT1_TICKERS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL",   # Tech
+    # Information Technology
+      "AAPL", "MSFT", "NVDA", "GOOGL",   # Tech
     "JPM",  "BAC",                       # Financials
     "UNH",  "JNJ",                       # Healthcare
     "AMZN", "WMT",                       # Consumer
@@ -14,7 +15,7 @@ AGENT1_TICKERS = [
     "TLT",                               # Long-duration treasuries (safe haven)
 ]
 
-# Agent 2 has no TLT — purely equity, return-maximizing
+# Agent 2: proposal equities only (no IEF/SHY); return-maximizing SAC + turnover penalty
 AGENT2_TICKERS = [
     "AAPL", "MSFT", "NVDA", "GOOGL",
     "JPM",  "BAC",

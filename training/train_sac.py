@@ -279,10 +279,10 @@ if __name__ == "__main__":
 
 # ── Quick-start commands (copy-paste, do not uncomment to run from here) ──────
 #
-# Train Agent 1 (risk-averse, 13 assets including TLT):
+# Train Agent 1 (risk-averse; see AGENT1_TICKERS in config.py):
 #   python -m training.train_sac --agent 1 --timesteps 200000 --seed 42
 #
-# Train Agent 2 (return-maximising, 12 equities, no bonds):
+# Train Agent 2 (return-maximising; equities only per config.AGENT2_TICKERS):
 #   python -m training.train_sac --agent 2 --timesteps 200000 --seed 42
 #
 # Monitor both agents in TensorBoard:
