@@ -64,12 +64,7 @@ class Agent1Env(BaseTradingEnv):
         current_drawdown = getattr(self, 'drawdown', 0.0)      
         current_port_vol = getattr(self, 'port_vol', 0.0)      
         
-        # ====================================================================
-        # 2. CALCULATE PENALTIES
-        # ====================================================================
-        # The Tweak: Squaring the drawdown ("** 2") forces non-linear risk aversion.
-        # Small dips are ignored, but severe crashes trigger massive penalties, 
-        # forcing the agent into safe-haven assets (e.g. IEF/SHY).
+    
         drawdown_penalty = self.lambda_drawdown * (current_drawdown ** 2) 
         
         # Standard linear penalties
