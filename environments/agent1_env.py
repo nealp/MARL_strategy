@@ -17,7 +17,7 @@
 import numpy as np
 import pandas as pd
 
-from config import LAMBDA_DRAWDOWN, LAMBDA_VOLATILITY, TURNOVER_COST
+from config import LAMBDA_DRAWDOWN, LAMBDA_VOLATILITY, TURNOVER_COST, VOLATILITY_WINDOW
 from environments.base_env import BaseTradingEnv
 
 
@@ -48,37 +48,26 @@ class Agent1Env(BaseTradingEnv):
 
     def compute_reward(self, log_return, turnover, new_weights):
         """
-        Computes the reward for Agent 1 (Risk-Averse).
-        This replaces the original compute_reward function to fix the TypeError.
+        Computes the reward for Agent 1 (risk-averse).
         """
-        # ====================================================================
-        # 1. MAP YOUR VARIABLES
-        # We now use the arguments directly passed from base_env.py 
-        # (log_return and turnover) and grab the risk metrics from self.
-        # ====================================================================
-        current_log_return = log_return  
-        current_turnover = turnover      
-        
-        # Fetch the current drawdown and portfolio volatility from the environment state.
-        # (Using getattr as a safeguard in case the variable names slightly differ)
-        current_drawdown = getattr(self, 'drawdown', 0.0)      
-        current_port_vol = getattr(self, 'port_vol', 0.0)      
-        
-        # ====================================================================
-        # 2. CALCULATE PENALTIES
-        # ====================================================================
-        # The Tweak: Squaring the drawdown ("** 2") forces non-linear risk aversion.
-        # Small dips are ignored, but severe crashes trigger massive penalties, 
-        # forcing the agent into safe-haven assets (TLT).
-        drawdown_penalty = self.lambda_drawdown * (current_drawdown ** 2) 
-        
-        # Standard linear penalties
+        current_log_return = float(log_return)
+        current_turnover = float(turnover)
+        current_drawdown = float(self.drawdown)
+
+        # Rolling portfolio volatility over recent daily log returns.
+        self._return_history.append(current_log_return)
+        if len(self._return_history) > VOLATILITY_WINDOW:
+            self._return_history = self._return_history[-VOLATILITY_WINDOW:]
+
+        if len(self._return_history) >= 2:
+            current_port_vol = float(np.std(self._return_history))
+        else:
+            current_port_vol = 0.0
+
+        # Squared drawdown makes large underwater periods much more expensive.
+        drawdown_penalty = self.lambda_drawdown * (current_drawdown ** 2)
         volatility_penalty = self.lambda_volatility * current_port_vol
         turnover_penalty = self.turnover_cost * current_turnover
-        
-        # ====================================================================
-        # 3. FINAL REWARD
-        # ====================================================================
+
         reward = current_log_return - drawdown_penalty - volatility_penalty - turnover_penalty
-        
-        return reward
+        return float(reward)

@@ -72,6 +72,7 @@ class BaseTradingEnv(gym.Env):
         self.portfolio_weights = None
         self.portfolio_value   = None
         self.peak_value        = None
+        self.drawdown          = 0.0
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ class BaseTradingEnv(gym.Env):
         self.portfolio_weights = np.full(self.n_assets, 1.0 / self.n_assets, dtype=np.float32)
         self.portfolio_value   = 1.0
         self.peak_value        = 1.0
+        self.drawdown          = 0.0
 
         return self._observation(), {}
 
@@ -156,6 +158,7 @@ class BaseTradingEnv(gym.Env):
         self.current_step += 1
 
         log_return, turnover = self._portfolio_step(new_weights, old_weights)
+        self.drawdown = (self.peak_value - self.portfolio_value) / (self.peak_value + 1e-8)
         reward               = self.compute_reward(log_return, turnover, new_weights)
 
         self.portfolio_weights = new_weights
@@ -168,7 +171,7 @@ class BaseTradingEnv(gym.Env):
             "turnover":         turnover,
             "portfolio_value":  self.portfolio_value,
             # Current drawdown from peak — useful for logging even for Agent 2
-            "drawdown": (self.peak_value - self.portfolio_value) / (self.peak_value + 1e-8),
+            "drawdown":         self.drawdown,
         }
 
         return obs, float(reward), done, False, info
