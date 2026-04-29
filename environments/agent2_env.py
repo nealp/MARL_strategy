@@ -32,18 +32,24 @@ class Agent2Env(BaseTradingEnv):
         super().__init__(features, prices, **kwargs)
         self.turnover_cost = turnover_cost
 
-    def compute_reward(
-        self,
-        log_return:  float,
-        turnover:    float,
-        new_weights: np.ndarray,
-    ) -> float:
+    def compute_reward(self, log_return, turnover, new_weights):
         """
-        r = log_return − turnover_cost * turnover
-
-        Tuning guide:
-          turnover_cost too high → agent barely rebalances (passive index-like behavior)
-          turnover_cost too low  → agent over-trades on noise
-          0.001 (~10 bps) is a reasonable starting point for daily rebalancing
+        Computes the reward for Agent 2 (Return-Maximizing).
         """
-        return float(log_return - self.turnover_cost * turnover)
+        current_log_return = log_return
+        current_turnover = turnover
+        
+        # 1. Stop the Day-Trading: Multiply turnover cost by 2.5
+        # This forces Agent 2 to hold its positions rather than chasing daily noise.
+        turnover_penalty = (self.turnover_cost * 2.5) * current_turnover
+        
+        # 2. Asymmetric Momentum Reward
+        # Amplify positive returns BEFORE fees are subtracted. 
+        # This teaches the agent: "Holding stocks that go up is highly rewarded, 
+        # but churning the portfolio will destroy those gains."
+        if current_log_return > 0:
+            reward = (current_log_return * 3.0) - turnover_penalty
+        else:
+            reward = current_log_return - turnover_penalty
+            
+        return reward
