@@ -239,6 +239,9 @@ def build_configs() -> list[dict]:
     ]
 
     softmax_alloc_params = [
+        {"style": "softmax", "k": 0.5,  "clip_lo": 0.0, "clip_hi": 1.0}, # Very smooth gradient
+        {"style": "softmax", "k": 1.0,  "clip_lo": 0.0, "clip_hi": 1.0}, # Smooth gradient
+        {"style": "softmax", "k": 2.0,  "clip_lo": 0.10, "clip_hi": 0.90},
         {"style": "softmax", "k": 1.0,  "clip_lo": 0.15, "clip_hi": 0.85},
         {"style": "softmax", "k": 2.0,  "clip_lo": 0.15, "clip_hi": 0.85},
         {"style": "softmax", "k": 3.0,  "clip_lo": 0.10, "clip_hi": 0.90},

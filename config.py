@@ -35,7 +35,7 @@ TEST_START  = "2020-01-01"   # includes COVID crash + 2022 rate-hike regime
 TEST_END    = "2024-12-31"
 
 # ── Feature engineering ──────────────────────
-RETURN_WINDOWS    = [1, 5, 20, 60]   # lookback horizons for log returns (days)
+RETURN_WINDOWS    = [1, 5, 20, 60, 120, 252]   # lookback horizons for log returns (days)
 VOLATILITY_WINDOW = 20               # rolling std window for vol feature
 NORM_WINDOW       = 252              # rolling z-score window (1 trading year)
 
