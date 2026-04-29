@@ -190,7 +190,6 @@ def benchmark_sixty_forty(prices: pd.DataFrame) -> pd.Series:
     """
     60% SPY + 40% IEF, rebalanced monthly (same approximation as equal_weight).
     """
-    prices = prices.loc[~prices.index.duplicated(keep="first")]
     gross_spy = prices["SPY"] / prices["SPY"].shift(1)
     gross_ief = prices["IEF"] / prices["IEF"].shift(1)
     combined  = 0.6 * gross_spy + 0.4 * gross_ief
@@ -384,8 +383,8 @@ def main() -> None:
     dl_start = str((log1.index[0] - pd.Timedelta(days=5)).date())
     dl_end   = str(log1.index[-1].date())
 
-    universe = sorted(set(AGENT1_TICKERS + AGENT2_TICKERS))  # 13 unique tickers
-    bench_tickers = ["SPY", "IEF"] + universe
+    universe = sorted(set(AGENT1_TICKERS + AGENT2_TICKERS))
+    bench_tickers = list(dict.fromkeys(["SPY", "IEF"] + universe))
 
     print(f"Downloading benchmark prices ({dl_start} → {dl_end}) …")
     bench_prices = _download_prices(bench_tickers, dl_start, dl_end)
