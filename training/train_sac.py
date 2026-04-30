@@ -234,7 +234,7 @@ def main() -> None:
         "MlpPolicy",
         train_vec,
         learning_rate=3e-4,
-        buffer_size=100_000,
+        buffer_size=600000,
         batch_size=256,
         tau=0.005,
         gamma=0.99,
