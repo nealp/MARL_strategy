@@ -202,24 +202,43 @@ def _metrics(log_ret: pd.Series, label: str) -> dict:
     drawdown_ser = (cum / running_max) - 1
     max_dd       = float(drawdown_ser.min())   # negative value
 
-    calmar = ann_ret / abs(max_dd) if max_dd != 0 else float("nan")
-
-    downside = simple[simple < 0]
-    sortino_denom = float(np.sqrt((downside ** 2).mean()) * np.sqrt(252)) if len(downside) > 0 else 1e-8
-    sortino = ann_ret / sortino_denom
-
     return {
         "Strategy":      label,
         "Total Return":  f"{total_ret:+.1%}",
         "Ann. Return":   f"{ann_ret:+.1%}",
-        "Ann. Sharpe":   f"{sharpe:.3f}",
+        "Sharpe":        f"{sharpe:.3f}",
         "Max Drawdown":  f"{max_dd:.1%}",
-        "Calmar":        f"{calmar:.3f}",
-        "Sortino":       f"{sortino:.3f}",
     }
 
 
-# ── 5. Plots ──────────────────────────────────────────────────────────────────
+# ── 5. Rolling window returns ─────────────────────────────────────────────────
+
+def _rolling_window_returns(strategies: dict) -> pd.DataFrame:
+    """Compute total return for each strategy in each 6-month window."""
+    windows = [
+        (f"{year} H{half}", f"{year}-{'01-01' if half == 1 else '07-01'}",
+         f"{year}-{'06-30' if half == 1 else '12-31'}")
+        for year in range(2020, 2025)
+        for half in (1, 2)
+    ]
+    focus = ["Meta-Agent", "Agent 1 (Risk-Averse)", "Agent 2 (Return-Max)", "SPY"]
+    rows = []
+    for label, start, end in windows:
+        row: dict = {"Window": label}
+        for name in focus:
+            if name not in strategies:
+                continue
+            r = strategies[name].loc[start:end].dropna()
+            if len(r) > 0:
+                total = float((np.exp(r) - 1 + 1).prod() - 1)
+                row[name] = f"{total:+.1%}"
+            else:
+                row[name] = "N/A"
+        rows.append(row)
+    return pd.DataFrame(rows).set_index("Window")
+
+
+# ── 6. Plots ──────────────────────────────────────────────────────────────────
 
 _PALETTE = {
     "Meta-Agent":            "#1f77b4",
@@ -344,6 +363,70 @@ def plot_drawdowns(strategies: dict, out: Path) -> None:
     print(f"  Saved: {out}")
 
 
+def plot_rolling_windows(strategies: dict, out_dir: Path) -> None:
+    windows = [
+        (f"{year}_H{half}", f"{year}-{'01-01' if half == 1 else '07-01'}",
+         f"{year}-{'06-30' if half == 1 else '12-31'}")
+        for year in range(2020, 2025)
+        for half in (1, 2)
+    ]
+
+    focus = ["Meta-Agent", "Agent 1 (Risk-Averse)", "Agent 2 (Return-Max)", "SPY"]
+    line_styles = {
+        "Meta-Agent":            dict(linewidth=2.5, zorder=5),
+        "Agent 1 (Risk-Averse)": dict(linewidth=1.4, linestyle="--", alpha=0.85),
+        "Agent 2 (Return-Max)":  dict(linewidth=1.4, linestyle=":", alpha=0.85),
+        "SPY":                   dict(linewidth=1.6, alpha=0.9),
+    }
+
+    for label, start, end in windows:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sharpe_lines = []
+
+        for name in focus:
+            if name not in strategies:
+                continue
+            r = strategies[name]
+            window_r = r.loc[start:end].dropna()
+            if len(window_r) < 5:
+                continue
+
+            cv = _cum_value(window_r)
+            cv = cv / cv.iloc[0]
+
+            ax.plot(cv.index, cv.values,
+                    label=name,
+                    color=_PALETTE.get(name),
+                    **line_styles.get(name, {}))
+
+            if name in ("Meta-Agent", "SPY"):
+                sharpe = float(window_r.mean() / (window_r.std() + 1e-8) * np.sqrt(252))
+                sharpe_lines.append(f"{name} Sharpe: {sharpe:.3f}")
+
+        ax.axhline(1.0, color="black", linewidth=0.4, linestyle="--", alpha=0.3)
+        ax.set_ylabel("Portfolio Value  (start = 1.00)", fontsize=10)
+        year, half = label.split("_")
+        half_label = "Jan–Jun" if half == "H1" else "Jul–Dec"
+        ax.set_title(f"6-Month Window  —  {year} {half_label}", fontsize=12, fontweight="bold")
+        ax.legend(loc="upper left", fontsize=9, framealpha=0.9)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+        ax.grid(alpha=0.18)
+
+        if sharpe_lines:
+            ax.text(
+                0.98, 0.97, "\n".join(sharpe_lines),
+                transform=ax.transAxes,
+                fontsize=9, va="top", ha="right",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+            )
+
+        fig.tight_layout()
+        out = out_dir / f"rolling_{label}.png"
+        fig.savefig(out, dpi=150)
+        plt.close(fig)
+        print(f"  Saved: {out}")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -404,7 +487,16 @@ def main() -> None:
     # ── Metrics table ─────────────────────────────────────────────────────────
     rows = [_metrics(ret, name) for name, ret in strategies.items()]
     metrics_df = pd.DataFrame(rows).set_index("Strategy")
-    metrics_df.to_csv(RESULTS_DIR / "metrics_summary.csv")
+
+    rolling_df = _rolling_window_returns(strategies)
+
+    # Save both tables to one CSV (metrics first, then rolling window returns)
+    csv_path = RESULTS_DIR / "metrics_summary.csv"
+    with open(csv_path, "w") as f:
+        f.write("PERFORMANCE SUMMARY — Test Period 2020–2024\n")
+        metrics_df.to_csv(f)
+        f.write("\nROLLING WINDOW RETURNS (6-month)\n")
+        rolling_df.to_csv(f)
 
     sep = "=" * 78
     print(f"\n{sep}")
@@ -412,13 +504,20 @@ def main() -> None:
     print(sep)
     print(metrics_df.to_string())
     print(sep)
-    print(f"\nMetrics saved → {RESULTS_DIR / 'metrics_summary.csv'}")
+
+    print(f"\n{sep}")
+    print("  ROLLING WINDOW RETURNS  (6-month periods)")
+    print(sep)
+    print(rolling_df.to_string())
+    print(sep)
+    print(f"\nMetrics saved → {csv_path}")
 
     # ── Plots ─────────────────────────────────────────────────────────────────
     print("\nGenerating plots …")
     plot_portfolio_values(strategies, PLOTS_DIR / "portfolio_values.png")
     plot_meta_allocation(alloc_df,    PLOTS_DIR / "meta_allocation.png")
     plot_drawdowns(strategies,        PLOTS_DIR / "drawdowns.png")
+    plot_rolling_windows(strategies,  PLOTS_DIR)
 
     print(f"\nAll done.  Open ./plots/ to review the charts.")
 
