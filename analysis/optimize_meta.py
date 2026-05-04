@@ -2,7 +2,8 @@
 Systematic search for the best meta-agent allocation rules.
 
 Benchmarks to beat:
-  Agent 1 alone: +190.1% total, Sharpe 1.012, Max DD -28.3%
+  Agent 1: +122.5% total, Sharpe 0.817, Max DD -34.4%
+  Agent 2: +133.4% total, Sharpe 0.877, Max DD -31.3%  ← bar to beat
 
 Tests ~200+ parameter combinations across:
   - Signal metrics: Sharpe, Sortino, Momentum, Calmar, Composite
@@ -27,7 +28,25 @@ import pandas as pd
 
 RESULTS_DIR = Path("./results")
 
-AGENT1_BASELINE = {"total_return": 1.901, "sharpe": 1.012, "max_dd": -0.283, "calmar": 0.842}
+
+def _load_agent1_baseline() -> dict:
+    """Read Agent 1 test returns and compute live baseline — never goes stale."""
+    path = RESULTS_DIR / "agent1_test_returns.csv"
+    if not path.exists():
+        return {"total_return": 1.0, "sharpe": 0.0, "max_dd": -1.0, "calmar": 0.0}
+    r      = pd.read_csv(path, index_col="date", parse_dates=True)["log_return"].values
+    simple = np.exp(r) - 1
+    total  = float((1 + simple).prod() - 1)
+    n      = len(r)
+    ann    = float((1 + total) ** (252 / n) - 1)
+    sharpe = float(np.mean(r) / (np.std(r) + 1e-8) * np.sqrt(252))
+    cum    = np.cumprod(1 + simple)
+    mdd    = float((cum / np.maximum.accumulate(cum) - 1).min())
+    calmar = ann / (abs(mdd) + 1e-8)
+    return {"total_return": total, "sharpe": sharpe, "max_dd": mdd, "calmar": calmar}
+
+
+AGENT1_BASELINE = _load_agent1_baseline()
 
 
 # ── Signal functions ──────────────────────────────────────────────────────────
@@ -239,9 +258,6 @@ def build_configs() -> list[dict]:
     ]
 
     softmax_alloc_params = [
-        {"style": "softmax", "k": 0.5,  "clip_lo": 0.0, "clip_hi": 1.0}, # Very smooth gradient
-        {"style": "softmax", "k": 1.0,  "clip_lo": 0.0, "clip_hi": 1.0}, # Smooth gradient
-        {"style": "softmax", "k": 2.0,  "clip_lo": 0.10, "clip_hi": 0.90},
         {"style": "softmax", "k": 1.0,  "clip_lo": 0.15, "clip_hi": 0.85},
         {"style": "softmax", "k": 2.0,  "clip_lo": 0.15, "clip_hi": 0.85},
         {"style": "softmax", "k": 3.0,  "clip_lo": 0.10, "clip_hi": 0.90},
@@ -268,29 +284,55 @@ def build_configs() -> list[dict]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print("Loading agent returns …")
-    df1 = pd.read_csv(RESULTS_DIR / "agent1_test_returns.csv",
-                      index_col="date", parse_dates=True)
-    df2 = pd.read_csv(RESULTS_DIR / "agent2_test_returns.csv",
-                      index_col="date", parse_dates=True)
+    # ── Load val returns for parameter selection ──────────────────────────────
+    # Optimizing on test data would be selection bias (picking the luckiest of
+    # 7,800 configs on the same period we report performance on).
+    # We select parameters on the validation period (2018-2020) and then
+    # evaluate the chosen config on the test period (2020-2024).
+    val1_path  = RESULTS_DIR / "agent1_val_returns.csv"
+    val2_path  = RESULTS_DIR / "agent2_val_returns.csv"
+    test1_path = RESULTS_DIR / "agent1_test_returns.csv"
+    test2_path = RESULTS_DIR / "agent2_test_returns.csv"
 
-    shared = df1.index.intersection(df2.index)
-    r1 = df1.loc[shared, "log_return"].values
-    r2 = df2.loc[shared, "log_return"].values
+    use_val = val1_path.exists() and val2_path.exists()
+
+    if use_val:
+        print("Loading validation returns for parameter selection …")
+        df1_sel = pd.read_csv(val1_path,  index_col="date", parse_dates=True)
+        df2_sel = pd.read_csv(val2_path,  index_col="date", parse_dates=True)
+        df1_eval = pd.read_csv(test1_path, index_col="date", parse_dates=True)
+        df2_eval = pd.read_csv(test2_path, index_col="date", parse_dates=True)
+        print("  [CLEAN] Parameters selected on val (2018-2020), evaluated on test (2020-2024)")
+    else:
+        print("WARNING: val returns not found — optimizing on test data (selection bias).")
+        print("  Run first:  python -m training.save_agent_returns --agent 1 --split val")
+        print("              python -m training.save_agent_returns --agent 2 --split val\n")
+        df1_sel  = pd.read_csv(test1_path, index_col="date", parse_dates=True)
+        df2_sel  = pd.read_csv(test2_path, index_col="date", parse_dates=True)
+        df1_eval = df1_sel
+        df2_eval = df2_sel
+
+    sel_shared  = df1_sel.index.intersection(df2_sel.index)
+    eval_shared = df1_eval.index.intersection(df2_eval.index)
+
+    r1_sel  = df1_sel.loc[sel_shared,  "log_return"].values
+    r2_sel  = df2_sel.loc[sel_shared,  "log_return"].values
+    r1_eval = df1_eval.loc[eval_shared, "log_return"].values
+    r2_eval = df2_eval.loc[eval_shared, "log_return"].values
 
     configs = build_configs()
-    print(f"Testing {len(configs):,} configurations …\n")
+    print(f"Testing {len(configs):,} configurations on {'val' if use_val else 'test'} period …\n")
 
     rows = []
     for i, cfg in enumerate(configs):
         if i % 500 == 0:
             print(f"  {i}/{len(configs)} …")
         try:
-            m = simulate(r1, r2,
-                         lookback       = cfg["lookback"],
-                         rebalance_freq = cfg["rebalance_freq"],
-                         signal_name    = cfg["signal"],
-                         alloc_params   = cfg["alloc_params"],
+            m = simulate(r1_sel, r2_sel,
+                         lookback         = cfg["lookback"],
+                         rebalance_freq   = cfg["rebalance_freq"],
+                         signal_name      = cfg["signal"],
+                         alloc_params     = cfg["alloc_params"],
                          drawdown_penalty = cfg["dd_penalty"])
             rows.append({**cfg, **m})
         except Exception:
@@ -298,6 +340,18 @@ def main() -> None:
 
     results = pd.DataFrame(rows)
     results = results.sort_values("score", ascending=False).reset_index(drop=True)
+
+    # ── Re-evaluate best config on TEST period (true out-of-sample) ───────────
+    if use_val:
+        best_cfg = results.iloc[0]
+        test_perf = simulate(r1_eval, r2_eval,
+                             lookback         = best_cfg["lookback"],
+                             rebalance_freq   = best_cfg["rebalance_freq"],
+                             signal_name      = best_cfg["signal"],
+                             alloc_params     = best_cfg["alloc_params"],
+                             drawdown_penalty = best_cfg["dd_penalty"])
+    else:
+        test_perf = None
 
     # ── Print top 20 ──────────────────────────────────────────────────────────
     top = results.head(20)
@@ -347,15 +401,20 @@ def main() -> None:
         print(f"  k (softmax)     : {ap['k']}")
         print(f"  Clip            : [{ap['clip_lo']}, {ap['clip_hi']}]")
     print(f"{'─'*60}")
-    print(f"  Total Return    : {best['total_return']:+.2%}  "
-          f"(Agent1 baseline: {AGENT1_BASELINE['total_return']:+.1%})")
-    print(f"  Ann. Sharpe     : {best['sharpe']:.4f}  "
-          f"(Agent1 baseline: {AGENT1_BASELINE['sharpe']:.3f})")
-    print(f"  Max Drawdown    : {best['max_dd']:.2%}  "
-          f"(Agent1 baseline: {AGENT1_BASELINE['max_dd']:.1%})")
-    print(f"  Calmar          : {best['calmar']:.4f}  "
-          f"(Agent1 baseline: {AGENT1_BASELINE['calmar']:.3f})")
+    split_label = "Val" if use_val else "Test (in-sample)"
+    print(f"  [{split_label}] Total Return : {best['total_return']:+.2%}")
+    print(f"  [{split_label}] Sharpe       : {best['sharpe']:.4f}")
+    print(f"  [{split_label}] Max Drawdown : {best['max_dd']:.2%}")
+    print(f"  [{split_label}] Calmar       : {best['calmar']:.4f}")
     print(f"  Composite Score : {best['score']:.4f}")
+    if test_perf is not None:
+        print(f"{'─'*60}")
+        print(f"  [Test OOS]  Total Return : {test_perf['total_return']:+.2%}  "
+              f"(Agent1 baseline: {AGENT1_BASELINE['total_return']:+.1%})")
+        print(f"  [Test OOS]  Sharpe       : {test_perf['sharpe']:.4f}  "
+              f"(Agent1 baseline: {AGENT1_BASELINE['sharpe']:.3f})")
+        print(f"  [Test OOS]  Max Drawdown : {test_perf['max_dd']:.2%}")
+        print(f"  [Test OOS]  Calmar       : {test_perf['calmar']:.4f}")
     print(f"{'='*60}")
 
     # ── How many strategies beat Agent 1 on each metric? ─────────────────────
@@ -369,6 +428,23 @@ def main() -> None:
 
     results.to_csv(RESULTS_DIR / "meta_optimization_results.csv", index=False)
     print(f"\n  Full results saved → {RESULTS_DIR / 'meta_optimization_results.csv'}")
+
+    # ── Save best params for backtest.py to consume ───────────────────────────
+    import json
+    params_out = {
+        "signal":         best["signal"],
+        "lookback":       int(best["lookback"]),
+        "rebalance_freq": int(best["rebalance_freq"]),
+        "dd_penalty":     float(best["dd_penalty"]),
+        "alloc_params":   {k: (float(v) if isinstance(v, (int, float, np.floating)) else v)
+                           for k, v in best["alloc_params"].items()},
+        "selected_on":    "val" if use_val else "test",
+    }
+    params_path = RESULTS_DIR / "meta_params.json"
+    with open(params_path, "w") as f:
+        json.dump(params_out, f, indent=2)
+    print(f"  Best params saved  → {params_path}")
+    print(f"\n  Now run:  python -m analysis.backtest")
 
 
 if __name__ == "__main__":

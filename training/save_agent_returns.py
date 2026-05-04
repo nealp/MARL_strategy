@@ -175,11 +175,15 @@ def run_agent_on_test(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run a trained SAC agent on the test split and save results to CSV."
+        description="Run a trained SAC agent on a data split and save results to CSV."
     )
     parser.add_argument(
         "--agent", type=int, required=True, choices=[1, 2],
         help="Which agent (1 = risk-averse, 2 = return-maximising)",
+    )
+    parser.add_argument(
+        "--split", type=str, default="test", choices=["val", "test"],
+        help="Which data split to roll out on (default: test)",
     )
     parser.add_argument(
         "--model-path", type=str, default=None,
@@ -224,19 +228,20 @@ def main() -> None:
         raise SystemExit(1)
 
     # ── Data ──────────────────────────────────────────────────────────────────
-    print(f"\n=== Agent {n} — Test Rollout ===")
+    split = args.split
+    print(f"\n=== Agent {n} — {split.capitalize()} Rollout ===")
     print("Loading data …")
     features, prices = build_features(cfg["tickers"])
     splits = split_data(features, prices)
 
-    test_features = splits["test_features"]
-    test_prices   = splits["test_prices"]
+    split_features = splits[f"{split}_features"]
+    split_prices   = splits[f"{split}_prices"]
 
-    print(f"Test period: {test_features.index[0].date()} → {test_features.index[-1].date()} "
-          f"({len(test_features)} rows)")
+    print(f"{split.capitalize()} period: {split_features.index[0].date()} → "
+          f"{split_features.index[-1].date()} ({len(split_features)} rows)")
 
     # ── Environment ───────────────────────────────────────────────────────────
-    env = make_sequential_env(cfg["env_cls"], test_features, test_prices)
+    env = make_sequential_env(cfg["env_cls"], split_features, split_prices)
 
     # ── Load model ────────────────────────────────────────────────────────────
     print(f"Loading model from {model_path} …")
@@ -250,8 +255,8 @@ def main() -> None:
     out_dir = Path("./results")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    returns_path = out_dir / f"agent{n}_test_returns.csv"
-    weights_path = out_dir / f"agent{n}_test_weights.csv"
+    returns_path = out_dir / f"agent{n}_{split}_returns.csv"
+    weights_path = out_dir / f"agent{n}_{split}_weights.csv"
 
     returns_df.to_csv(returns_path)
     weights_df.to_csv(weights_path)
@@ -265,7 +270,7 @@ def main() -> None:
         - (returns_df["portfolio_value"] / returns_df["portfolio_value"].cummax()).min()
     )
 
-    print(f"\n=== Test Period Summary ===")
+    print(f"\n=== {split.capitalize()} Period Summary ===")
     print(f"Steps recorded    : {len(returns_df)}")
     print(f"Total return      : {total_return:+.2%}")
     print(f"Annualised Sharpe : {sharpe:.4f}")

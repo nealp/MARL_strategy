@@ -1,0 +1,14 @@
+{
+  "signal": "composite_sortino_1",
+  "lookback": 30,
+  "rebalance_freq": 15,
+  "dd_penalty": 0.0,
+  "alloc_params": {
+    "style": "discrete",
+    "lo_thresh": 0.1,
+    "hi_thresh": 0.3,
+    "w_lo": 0.7,
+    "w_hi": 0.9
+  },
+  "selected_on": "val"
+}

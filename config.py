@@ -14,11 +14,13 @@ AGENT1_TICKERS = [
 ]
 
 AGENT2_TICKERS = [
-    "AAPL", "MSFT", "NVDA", "GS", "JPM", "V", 
-    "AMGN", "JNJ", "UNH", "AMZN", "HD", "MCD", 
-    "GOOG", "DIS", "NFLX", "CAT", "HON", "WM", 
+    "AAPL", "MSFT", "NVDA", "GS", "JPM", "V",
+    "AMGN", "JNJ", "UNH", "AMZN", "HD", "MCD",
+    "GOOG", "DIS", "NFLX", "CAT", "HON", "WM",
     "KO", "COST", "PG", "COP", "XOM", "SLB"
 ]
+
+ALL_TICKERS = AGENT1_TICKERS
 
 # ── Date ranges ──────────────────────────────
 # Download starts in 2009 so the 60-day + 252-day lookbacks are valid by 2010
