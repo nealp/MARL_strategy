@@ -28,17 +28,14 @@ from config import AGENT1_TICKERS, AGENT2_TICKERS
 RESULTS_DIR         = Path("./results")
 PLOTS_DIR           = Path("./plots")
 
-# ── Optimal meta-agent parameters (found via analysis/optimize_meta.py) ───────
-# Signal: Sharpe + 2.0 × per-day momentum — captures trending regimes
-#         that pure Sharpe misses (e.g. Agent 2's 2021 bull run outperformance)
-# Softmax k=10 with clip [0.1, 0.9]: aggressively commits to the leading agent
-# Drawdown penalty=2.0: penalises whichever agent is currently underwater
+# ── Meta-agent parameters (update these to match optimize_meta.py output) ─────
 META_LOOKBACK       = 30    # rolling window for signal computation (days)
 META_REBALANCE_DAYS = 20    # rebalance frequency (trading days)
-META_SOFTMAX_K      = 10.0  # softmax temperature — higher = more aggressive switching
-META_CLIP_LO        = 0.10  # minimum allocation to either agent
-META_CLIP_HI        = 0.90  # maximum allocation to either agent
 META_DD_PENALTY     = 2.0   # subtract penalty × current_drawdown_pct from agent score
+META_LO_THRESH      = 0.10  # Sharpe diff below this → 50/50
+META_HI_THRESH      = 0.30  # Sharpe diff above this → commit heavily to winner
+META_W_LO           = 0.70  # allocation to better agent when diff is medium
+META_W_HI           = 0.90  # allocation to better agent when diff is large
 
 
 # ── 1. Load agent data ────────────────────────────────────────────────────────
@@ -56,30 +53,16 @@ def _load_csv(n: int) -> pd.DataFrame:
 # ── 2. Meta-agent ─────────────────────────────────────────────────────────────
 
 def _composite_signal(r: np.ndarray) -> float:
-    """
-    Composite signal = Sharpe + 2.0 × normalised momentum.
-
-    Sharpe captures risk-adjusted return; momentum captures whether the agent
-    is currently on a winning streak.  Combining both outperformed pure Sharpe
-    across 284 out of 7,800 tested configurations (see analysis/optimize_meta.py).
-
-    Per-day momentum normalisation (/ lookback * 0.001) keeps momentum on a
-    comparable scale to Sharpe regardless of window length.
-    """
-    sharpe   = float(np.mean(r) / (np.std(r) + 1e-8) * np.sqrt(252))
-    momentum = float(np.sum(r) / (len(r) * 0.001 + 1e-8))
-    return sharpe + 2.0 * momentum
+    return float(np.mean(r) / (np.std(r) + 1e-8) * np.sqrt(252))
 
 
-def _softmax_allocation(diff: float) -> tuple[float, float]:
-    """
-    Continuous sigmoid allocation based on signal difference.
-    k=10 makes this aggressively directional — a diff of 0.2 already gives ~88% to
-    the better agent. Clipped to [META_CLIP_LO, META_CLIP_HI] to prevent going
-    all-in on one agent.
-    """
-    w1 = float(np.clip(1.0 / (1.0 + np.exp(-META_SOFTMAX_K * diff)),
-                       META_CLIP_LO, META_CLIP_HI))
+def _discrete_allocation(diff: float) -> tuple[float, float]:
+    if abs(diff) < META_LO_THRESH:
+        return 0.5, 0.5
+    if abs(diff) < META_HI_THRESH:
+        w1 = META_W_LO if diff > 0 else (1.0 - META_W_LO)
+    else:
+        w1 = META_W_HI if diff > 0 else (1.0 - META_W_HI)
     return w1, 1.0 - w1
 
 
@@ -138,7 +121,7 @@ def run_meta_agent(
             s1 += META_DD_PENALTY * dd1
             s2 += META_DD_PENALTY * dd2
 
-            w1, w2 = _softmax_allocation(s1 - s2)
+            w1, w2 = _discrete_allocation(s1 - s2)
             alloc_records.append(
                 {"date": shared[i], "w1": w1, "w2": w2, "signal1": s1, "signal2": s2}
             )

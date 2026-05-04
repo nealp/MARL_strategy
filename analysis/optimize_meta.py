@@ -370,6 +370,27 @@ def main() -> None:
     results.to_csv(RESULTS_DIR / "meta_optimization_results.csv", index=False)
     print(f"\n  Full results saved → {RESULTS_DIR / 'meta_optimization_results.csv'}")
 
+    # ── Best parameters summary ───────────────────────────────────────────────
+    print(f"\n{'='*60}")
+    print(f"  BEST PARAMETERS TO USE IN BACKTEST")
+    print(f"{'='*60}")
+    print(f"  META_LOOKBACK       = {int(best['lookback'])}")
+    print(f"  META_REBALANCE_DAYS = {int(best['rebalance_freq'])}")
+    print(f"  Signal              = {best['signal']}")
+    print(f"  META_DD_PENALTY     = {best['dd_penalty']}")
+    if ap["style"] == "discrete":
+        print(f"  Allocation style    = discrete")
+        print(f"  META_LO_THRESH      = {ap['lo_thresh']}")
+        print(f"  META_HI_THRESH      = {ap['hi_thresh']}")
+        print(f"  META_W_LO           = {ap['w_lo']}")
+        print(f"  META_W_HI           = {ap['w_hi']}")
+    else:
+        print(f"  Allocation style    = softmax")
+        print(f"  META_SOFTMAX_K      = {ap['k']}")
+        print(f"  META_CLIP_LO        = {ap.get('clip_lo', 0.1)}")
+        print(f"  META_CLIP_HI        = {ap.get('clip_hi', 0.9)}")
+    print(f"{'='*60}")
+
 
 if __name__ == "__main__":
     main()
