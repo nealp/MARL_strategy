@@ -152,38 +152,6 @@ def benchmark_spy(prices: pd.DataFrame) -> pd.Series:
     """SPY buy-and-hold."""
     return _daily_log_returns(prices[["SPY"]])["SPY"].rename("SPY")
 
-
-def benchmark_equal_weight(prices: pd.DataFrame, tickers: list[str]) -> pd.Series:
-    """
-    Equal-weight across `tickers`, rebalanced monthly.
-
-    Approximation: daily portfolio log return ≈ log of the equal-weight average
-    of gross returns.  This is exact only when weights don't drift, which is
-    true at rebalance dates and approximately true between them for monthly
-    rebalancing.
-    """
-    p = prices[tickers].dropna()
-    gross = (p / p.shift(1)).iloc[1:]
-    equal_gross = gross.mean(axis=1)
-    return np.log(equal_gross).rename("EqualWeight")
-
-
-def benchmark_sixty_forty(prices):
-    
-    # Extract only SPY
-    spy_prices = prices["SPY"].dropna()
-    
-    # Clean the index (strip times, keep first duplicate)
-    spy_prices.index = pd.to_datetime(spy_prices.index.astype(str).str[:10])
-    spy_prices = spy_prices.loc[~spy_prices.index.duplicated(keep='first')]
-
-    # Calculate returns for SPY only
-    gross_spy = spy_prices / spy_prices.shift(1)
-    
-    # Return the log returns
-    return np.log(gross_spy.iloc[1:]).rename("Benchmark (SPY)")
-
-
 # ── 4. Metrics ────────────────────────────────────────────────────────────────
 
 def _metrics(log_ret: pd.Series, label: str) -> dict:
@@ -244,8 +212,6 @@ _PALETTE = {
     "Agent 1 (Risk-Averse)": "#2ca02c",
     "Agent 2 (Return-Max)":  "#ff7f0e",
     "SPY":                   "#d62728",
-    "Equal-Weight":          "#9467bd",
-    "60/40 (SPY+IEF)":       "#8c564b",
 }
 
 _YEAR_FMT = mdates.DateFormatter("%Y")
@@ -263,8 +229,6 @@ def plot_portfolio_values(strategies: dict, out: Path) -> None:
         "Agent 1 (Risk-Averse)": dict(linewidth=1.4, linestyle="--", alpha=0.85),
         "Agent 2 (Return-Max)":  dict(linewidth=1.4, linestyle="--", alpha=0.85),
         "SPY":                   dict(linewidth=1.6, alpha=0.9),
-        "Equal-Weight":          dict(linewidth=1.2, linestyle=":", alpha=0.85),
-        "60/40 (SPY+IEF)":       dict(linewidth=1.2, linestyle=":", alpha=0.85),
     }
 
     for name, log_ret in strategies.items():
@@ -337,7 +301,7 @@ def plot_meta_allocation(alloc_df: pd.DataFrame, out: Path) -> None:
 
 
 def plot_drawdowns(strategies: dict, out: Path) -> None:
-    highlight = ["Meta-Agent", "SPY", "60/40 (SPY+IEF)"]
+    highlight = ["Meta-Agent", "SPY"]
     fig, ax = plt.subplots(figsize=(13, 5))
 
     for name, log_ret in strategies.items():
@@ -461,8 +425,6 @@ def main() -> None:
     bench_prices = _download_prices(bench_tickers, dl_start, dl_end)
 
     spy_log  = benchmark_spy(bench_prices)
-    eq_log   = benchmark_equal_weight(bench_prices, universe)
-    s40_log  = benchmark_sixty_forty(bench_prices)
 
     # ── Align all series on shared trading days ───────────────────────────────
     shared = (
@@ -470,8 +432,6 @@ def main() -> None:
         .intersection(log1.index)
         .intersection(log2.index)
         .intersection(spy_log.index)
-        .intersection(eq_log.index)
-        .intersection(s40_log.index)
     )
 
     strategies = {
@@ -479,8 +439,6 @@ def main() -> None:
         "Agent 1 (Risk-Averse)": log1.loc[shared],
         "Agent 2 (Return-Max)":  log2.loc[shared],
         "SPY":                   spy_log.loc[shared],
-        "Equal-Weight":          eq_log.loc[shared],
-        "60/40 (SPY+IEF)":       s40_log.loc[shared],
     }
 
     # ── Metrics table ─────────────────────────────────────────────────────────
