@@ -28,15 +28,14 @@ from config import AGENT1_TICKERS, AGENT2_TICKERS
 RESULTS_DIR         = Path("./results")
 PLOTS_DIR           = Path("./plots")
 
-# ── Meta-agent parameters (update these to match optimize_meta.py output) ─────
-META_LOOKBACK       = 30    # rolling window for signal computation (days)
-META_REBALANCE_DAYS = 20    # rebalance frequency (trading days)
-META_DD_PENALTY     = 2.0   # subtract penalty × current_drawdown_pct from agent score
-META_LO_THRESH      = 0.10  # Sharpe diff below this → 50/50
-META_HI_THRESH      = 0.30  # Sharpe diff above this → commit heavily to winner
-META_W_LO           = 0.70  # allocation to better agent when diff is medium
-META_W_HI           = 0.90  # allocation to better agent when diff is large
-
+# meta agent params
+META_LOOKBACK       = 30    
+META_REBALANCE_DAYS = 20    
+META_DD_PENALTY     = 3.0  
+META_LO_THRESH      = 0.15  
+META_HI_THRESH      = 0.40  
+META_W_LO           = 0.60  
+META_W_HI           = 0.75  
 
 # ── 1. Load agent data ────────────────────────────────────────────────────────
 

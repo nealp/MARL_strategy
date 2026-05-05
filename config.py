@@ -31,7 +31,7 @@ TRAIN_END   = "2018-01-01"
 VAL_START   = "2018-01-01"
 VAL_END     = "2020-01-01"
 
-TEST_START  = "2020-01-01"   # includes COVID crash + 2022 rate-hike regime
+TEST_START  = "2020-01-01"   
 TEST_END    = "2024-12-31"
 
 # ── Feature engineering ──────────────────────
